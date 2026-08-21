@@ -7,17 +7,6 @@ import 'package:laroona_flutter_lib/providers/request_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum UserRole {
-  none(0),
-  superAdmin(1),
-  admin(2),
-  subAdmin(3),
-  user(4);
-
-  const UserRole(this.value);
-  final int value;
-}
-
 class AuthProvider extends ChangeNotifier implements LoggedInState {
   bool _isInitializing = true;
   bool get isInitializing => _isInitializing;
@@ -57,7 +46,7 @@ class AuthProvider extends ChangeNotifier implements LoggedInState {
   String get token => _authUser != null ? _authUser['token'] : '';
 
   Future<bool> login(BuildContext context, dynamic user) async {
-    if (user == null || user['role_id'] != UserRole.subAdmin.value) {
+    if (user == null) {
       return false;
     }
     _authUser = user;

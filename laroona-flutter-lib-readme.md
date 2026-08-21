@@ -505,7 +505,7 @@ AppScaffold(
 
 ### 6. Authentication Pattern
 
-**AuthProvider manages user state and roles.**
+**AuthProvider manages user state.**
 
 ```dart
 final authProvider = Provider.of<AuthProvider>(context);
@@ -513,33 +513,45 @@ final authProvider = Provider.of<AuthProvider>(context);
 // Login
 await authProvider.login(context, {
   'token': 'jwt_token',
-  'role_id': 3,                    // UserRole enum values
+  'role_id': 1,                    // Your app's role ID
   'name': 'John Doe',
-  // ... other user data
+  // ... other user data (any structure your app needs)
 });
 
 // Logout
 await authProvider.logout(context);
 
 // Access user data
-final user = authProvider.user;
-final token = authProvider.token;
+final user = authProvider.user;       // Full user object
+final token = authProvider.token;     // JWT token
 final isLoggedIn = authProvider.loggedIn;
 
-// Role checks (from UserRole enum)
-// UserRole: superAdmin(1), admin(2), subAdmin(3), user(4)
-// Note: Current implementation only allows subAdmin (role_id: 3) to login
+// Example: Access user properties
+final userName = authProvider.user['name'];
+final userRole = authProvider.user['role_id'];
+final userEmail = authProvider.user['email'];
 ```
 
-**User Roles:**
+**Define Your Own Roles:**
+
+Each app should define its own user roles enum:
 
 ```dart
-enum UserRole {
-  none(0),
-  superAdmin(1),
-  admin(2),
-  subAdmin(3),
-  user(4);
+// In your app code (not in the library)
+enum AppUserRole {
+  guest(0),
+  user(1),
+  moderator(2),
+  admin(3),
+  superAdmin(4);
+
+  const AppUserRole(this.value);
+  final int value;
+}
+
+// Use it
+if (authProvider.user['role_id'] == AppUserRole.admin.value) {
+  // Show admin features
 }
 ```
 
@@ -1075,10 +1087,12 @@ This triggers automatic logout.
 
 1. Call API to get user data and token
 2. Call `authProvider.login(context, userData)`
-3. AuthProvider validates `role_id == 3` (subAdmin only in current implementation)
+3. User data validated (must not be null)
 4. User data saved to SharedPreferences
 5. RequestProvider cleared
 6. Navigate to home
+
+**Note:** The library doesn't enforce specific role validation. Implement your own role checks in your app based on your user structure.
 
 ### Logout Flow
 
@@ -1287,7 +1301,7 @@ class _MyListPageState extends State<MyListPage> {
 6. **Check context.mounted** before async operations that use context
 7. **DataInput types:** Use correct type for automatic validation (date, time)
 8. **API response format:** Backend must return expected JSON structure
-9. **Authentication:** Current implementation only allows `role_id: 3` (subAdmin)
+9. **Define your own roles:** Create your own UserRole enum in your app, not in the library
 
 ---
 

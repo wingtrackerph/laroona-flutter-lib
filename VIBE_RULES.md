@@ -59,7 +59,6 @@ Pointers when generating code:
     restartPage: true,
     ); - like this if you just initially call it
 - When fetching multiple endpoints use fetchRequests like:
-
   - fetchRequests(
     context,
     [
@@ -81,4 +80,4 @@ Pointers when generating code:
   extraParameters: {}, // Parameters will came from the data-input but if you have other parameters that is not from the data-input you can put it here
   );
 
-- use auth_provider.dart isSuperAdmin, isAdmin, isSubAdmin, isUser to know what is the current role of the user for hiding/showing widgets depending on the role
+- Define your own user roles enum in your app and implement role checking based on authProvider.user['role_id'] or similar fields from your user object. Hide/show widgets based on these role checks.
