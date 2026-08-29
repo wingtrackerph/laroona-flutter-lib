@@ -10,6 +10,7 @@ class AppScaffold extends StatefulWidget {
     super.key,
     this.title,
     this.titleIcon,
+    this.titleIconSize = iconSize,
     this.icons,
     this.actionWidgets,
     this.onActionPressed,
@@ -27,6 +28,7 @@ class AppScaffold extends StatefulWidget {
 
   final String? title;
   final String? titleIcon;
+  final double? titleIconSize;
   final List<IconData>? icons;
   final List<Widget>? actionWidgets;
   final Function(int index)? onActionPressed;
@@ -148,7 +150,7 @@ class _AppScaffoldState extends State<AppScaffold>
           mainAxisSize: MainAxisSize.min,
           children: [
             if (widget.titleIcon != null) ...[
-              Image.asset(widget.titleIcon!, height: iconSize, width: iconSize),
+              Image.asset(widget.titleIcon!, height: widget.titleIconSize),
               const SizedBox(width: paddingSizeXXSmall),
             ],
             Text(
