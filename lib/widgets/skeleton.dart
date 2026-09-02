@@ -192,6 +192,12 @@ const int minSkeletonBones = 1;
 /// animated bones.
 const int maxSkeletonBones = 12;
 
+/// How many stand-in rows a list skeleton draws unless told otherwise.
+///
+/// Enough to read as "a list is coming", few enough not to fill a tall phone
+/// with shimmering cards.
+const int defaultSkeletonRowCount = 3;
+
 /// The count used when the viewport has not been measured yet.
 const int unmeasuredSkeletonBones = 3;
 
@@ -291,6 +297,7 @@ class SkeletonList extends StatelessWidget {
   const SkeletonList({
     super.key,
     required this.rowBuilder,
+    this.rowCount = defaultSkeletonRowCount,
     this.rowHeight = defaultSkeletonItemHeight,
     this.padding = const EdgeInsets.fromLTRB(
       paddingSizeSmall,
@@ -301,6 +308,19 @@ class SkeletonList extends StatelessWidget {
   });
 
   final WidgetBuilder rowBuilder;
+
+  /// How many stand-in rows to draw, or null to fill the viewport.
+  ///
+  /// A FIXED FEW BY DEFAULT. Filling the screen was the obvious reading of
+  /// "show the shape of what is coming", and on a tall phone it produces eight
+  /// or ten shimmering cards -- which reads as a wall of noise rather than as
+  /// a page about to arrive, and animates far more than anybody needs to
+  /// understand that a list is loading. Three says the same thing quietly.
+  ///
+  /// Pass null for the old behaviour where the stand-in fills the space it is
+  /// given, via [bonesForHeight].
+  final int? rowCount;
+
   final double rowHeight;
   final EdgeInsets padding;
 
@@ -308,10 +328,12 @@ class SkeletonList extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final int count = bonesForHeight(
-          constraints.maxHeight - padding.vertical,
-          itemHeight: rowHeight,
-        );
+        final int count =
+            rowCount ??
+            bonesForHeight(
+              constraints.maxHeight - padding.vertical,
+              itemHeight: rowHeight,
+            );
 
         return ListView.builder(
           padding: padding,
