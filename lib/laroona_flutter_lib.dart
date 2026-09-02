@@ -20,6 +20,11 @@ export 'widgets/loading_button.dart';
 export 'widgets/loading_spinner.dart';
 export 'widgets/password_text_field.dart';
 export 'widgets/section_header.dart';
+// NOT exported here, deliberately: `widgets/skeleton.dart` is imported by its
+// own path. Re-exporting it from the barrel would make every app-side import
+// of the primitives redundant, and the analyzer says so -- `unnecessary_import`
+// on every screen that composes its own bones. Import it directly:
+//   import 'package:laroona_flutter_lib/widgets/skeleton.dart';
 
 // Modals
 export 'modals/app_modal.dart';

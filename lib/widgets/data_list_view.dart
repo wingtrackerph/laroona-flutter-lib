@@ -24,6 +24,7 @@ class DataListView extends StatefulWidget {
     this.onInitialLoad,
     this.onRefresh,
     this.onLoaded,
+    this.skeleton,
   });
 
   final String requestKey;
@@ -40,6 +41,24 @@ class DataListView extends StatefulWidget {
   final Function()? onInitialLoad;
   final Future<void> Function()? onRefresh;
   final Function()? onLoaded;
+
+  /// What to show while the FIRST load is in flight, instead of the spinner.
+  ///
+  /// A skeleton shaped like the rows that are coming tells the reader what to
+  /// expect and keeps the page from jumping when the data lands; a centred
+  /// spinner tells them only that something is happening.
+  ///
+  /// It also changes WHEN the loading state is shown, and that is the point.
+  /// The spinner branch below fires on `isLoading || !isDone` without ever
+  /// consulting the data, so it replaces the list on a pull-to-refresh too --
+  /// content the reader could already see, swapped for a spinner. A skeleton
+  /// is drawn only when there is genuinely nothing to show yet
+  /// (`items.isEmpty`); a refresh keeps the rows and lets [SmartRefresher]'s
+  /// own indicator do its job.
+  ///
+  /// Null keeps the original spinner behaviour exactly, so this is additive
+  /// for every screen that has not opted in.
+  final Widget? skeleton;
 
   @override
   State<DataListView> createState() => _DataListViewState();
@@ -203,10 +222,17 @@ class _DataListViewState extends State<DataListView> {
     final request = requestProvider.getRequest(widget.requestKey);
     final items = request.filteredData ?? request.data;
 
+    final bool isBusy = request.isLoading || !request.isDone;
+    // With a skeleton: first load only -- nothing to show yet. Without one:
+    // the original rule, unchanged.
+    final bool showLoading = !_isLoadingMore &&
+        isBusy &&
+        (widget.skeleton == null || items.isEmpty);
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
-      child: (!_isLoadingMore && (request.isLoading || !request.isDone))
-          ? const LoadingSpinner()
+      child: showLoading
+          ? (widget.skeleton ?? const LoadingSpinner())
           : Padding(
               padding: const EdgeInsets.only(top: paddingSizeXXSmall),
               child: SmartRefresher(
