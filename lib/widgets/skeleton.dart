@@ -172,3 +172,188 @@ class _SkeletonState extends State<Skeleton>
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// THE RULE — when a component shows the shape of what is coming.
+//
+// Pure: no BuildContext, no I/O, no provider. It lives beside the bones so an
+// app never has to re-derive "is this a first load or a refresh?".
+// ---------------------------------------------------------------------------
+
+/// The row height a list stand-in assumes when it is not told otherwise: one
+/// card with an avatar, two lines of text and its margin.
+const double defaultSkeletonItemHeight = 96;
+
+/// Never fewer than one bone: zero bones is a blank screen, which is worse
+/// than the spinner this loop removes.
+const int minSkeletonBones = 1;
+
+/// Never more than this many: a huge viewport must not build hundreds of
+/// animated bones.
+const int maxSkeletonBones = 12;
+
+/// The count used when the viewport has not been measured yet.
+const int unmeasuredSkeletonBones = 3;
+
+/// Whether [requestKey]-style request state means "show bones".
+///
+/// FIRST LOAD ONLY. A skeleton never replaces content the customer can already
+/// see, so:
+///
+/// * anything already in hand ([hasData]) wins — a fetch in flight over a list
+///   that is already on screen is a refresh, and the list stays;
+/// * a request that is [isDone] with nothing in it has been answered with
+///   "there is nothing", which belongs to the friendly empty state;
+/// * everything else — loading with nothing yet, or not even asked yet — is a
+///   first load, and a first load gets the shape of what is coming.
+///
+/// [isLoading] is part of the contract because callers read it off `Request`
+/// and because it names the case this rule exists for; the answer is fixed by
+/// the two facts above whether or not a fetch is currently in flight.
+bool showSkeleton({
+  required bool isLoading,
+  required bool isDone,
+  required bool hasData,
+}) {
+  if (hasData) {
+    // THE REFRESH RULE. Covering content the customer can already read is the
+    // one way this refactor makes the app feel slower.
+    return false;
+  }
+
+  if (isDone) {
+    // Answered, and the answer was "nothing". The empty state's job.
+    return false;
+  }
+
+  // Loading with nothing to show, or not asked yet: the first load. Both
+  // spellings of that — `isLoading` true, or a request that has not been sent —
+  // show the shape of what is coming.
+  return true;
+}
+
+/// How many shaped rows it takes to fill [height] with rows of [itemHeight].
+///
+/// So a list stand-in fills the viewport without any screen hard-coding a
+/// count, and so a short strip does not pretend to be a full page.
+int bonesForHeight(
+  double height, {
+  double itemHeight = defaultSkeletonItemHeight,
+}) {
+  final double rowHeight = itemHeight.isFinite && itemHeight > 0
+      ? itemHeight
+      : defaultSkeletonItemHeight;
+
+  if (!height.isFinite || height <= 0) {
+    // Nonsense or not-yet-laid-out input is not a reason to render nothing.
+    return unmeasuredSkeletonBones;
+  }
+
+  final int count = (height / rowHeight).ceil();
+
+  return count.clamp(minSkeletonBones, maxSkeletonBones);
+}
+
+// ---------------------------------------------------------------------------
+// COMPOSITION — the shapes every app needs, whatever its domain.
+//
+// The DOMAIN shapes (a booking card, a worker row) stay in the app: only the
+// app knows what its own cards look like. What generalises is the scaffolding
+// they are built from.
+// ---------------------------------------------------------------------------
+
+/// A card-shaped surround, matching `AppCard`'s corners and margins.
+class SkeletonCard extends StatelessWidget {
+  const SkeletonCard({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: paddingSizeXXSmall),
+      padding: const EdgeInsets.all(paddingSizeSmall),
+      decoration: BoxDecoration(
+        color: ThemeColors.getCardColor(context),
+        borderRadius: BorderRadius.circular(radiusSize),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// N stacked rows, as many as the viewport has room for.
+///
+/// The count comes from [bonesForHeight] so no screen hard-codes one, and the
+/// rows live in a non-scrolling `ListView` so a short viewport clips them
+/// instead of overflowing.
+class SkeletonList extends StatelessWidget {
+  const SkeletonList({
+    super.key,
+    required this.rowBuilder,
+    this.rowHeight = defaultSkeletonItemHeight,
+    this.padding = const EdgeInsets.fromLTRB(
+      paddingSizeSmall,
+      paddingSizeSmall,
+      paddingSizeSmall,
+      paddingSizeSmall,
+    ),
+  });
+
+  final WidgetBuilder rowBuilder;
+  final double rowHeight;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final int count = bonesForHeight(
+          constraints.maxHeight - padding.vertical,
+          itemHeight: rowHeight,
+        );
+
+        return ListView.builder(
+          padding: padding,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: count,
+          itemBuilder: (BuildContext context, int index) => rowBuilder(context),
+        );
+      },
+    );
+  }
+}
+
+/// Two text lines of different widths — a title and its supporting line.
+class SkeletonLines extends StatelessWidget {
+  const SkeletonLines({
+    super.key,
+    this.widths = const <double>[0.6, 0.4],
+    this.spacing = paddingSizeXXSmall,
+  });
+
+  final List<double> widths;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double available = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : 200;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            for (int index = 0; index < widths.length; index++) ...<Widget>[
+              if (index > 0) SizedBox(height: spacing),
+              SkeletonBone(width: available * widths[index]),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
